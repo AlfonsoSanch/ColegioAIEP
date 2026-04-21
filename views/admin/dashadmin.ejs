@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Administrador - Colegio AIEP</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="dashboard-header">
+    <div class="header-container">
+      <div class="logo-section">
+        <div class="logo">
+          <i class="fas fa-graduation-cap"></i>
+          <span>Colegio AIEP</span>
+        </div>
+      </div>
+      
+      <nav class="nav-menu">
+        <div class="user-info">
+          <div class="user-avatar">
+            <i class="fas fa-user-shield"></i>
+          </div>
+          <div class="user-details">
+            <span class="user-name"><%= usuario.nombre %> <%= usuario.apellido_paterno %></span>
+            <span class="user-role">Administrador</span>
+          </div>
+        </div>
+        
+        <div class="nav-actions">
+          <button class="nav-btn" onclick="toggleNotifications()">
+            <i class="fas fa-bell"></i>
+            <span class="badge">0</span>
+          </button>
+          <div class="dropdown">
+            <button class="nav-btn" onclick="toggleDropdown()">
+              <i class="fas fa-user-cog"></i>
+            </button>
+            <div class="dropdown-menu" id="userDropdown">
+              <a href="/auth/profile"><i class="fas fa-user"></i> Mi Perfil</a>
+              <a href="/auth/settings"><i class="fas fa-cog"></i> Configuración</a>
+              <div class="dropdown-divider"></div>
+              <a href="/auth/logout"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h3>Panel Administrativo</h3>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/auth/dashadmin" class="nav-item active">
+        <i class="fas fa-tachometer-alt"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/auth/users" class="nav-item">
+        <i class="fas fa-users"></i>
+        <span>Gestión de Usuarios</span>
+      </a>
+      <a href="/auth/students" class="nav-item">
+        <i class="fas fa-user-graduate"></i>
+        <span>Estudiantes</span>
+      </a>
+      <a href="/auth/teachers" class="nav-item">
+        <i class="fas fa-chalkboard-teacher"></i>
+        <span>Docentes</span>
+      </a>
+      <a href="/auth/courses" class="nav-item">
+        <i class="fas fa-book"></i>
+        <span>Cursos</span>
+      </a>
+      <a href="/auth/reports" class="nav-item">
+        <i class="fas fa-chart-bar"></i>
+        <span>Reportes</span>
+      </a>
+      <a href="/auth/security" class="nav-item">
+        <i class="fas fa-shield-alt"></i>
+        <span>Seguridad</span>
+      </a>
+      <a href="/auth/settings" class="nav-item">
+        <i class="fas fa-cogs"></i>
+        <span>Configuración</span>
+      </a>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Dashboard Administrador</h1>
+      <p class="page-subtitle">Bienvenido al panel de control del sistema</p>
+    </div>
+
+    <!-- Espacio para contenido real -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Panel de Control</h2>
+      </div>
+      <div class="card-content">
+        <p>Panel de administración del Colegio AIEP. Desde aquí podrás gestionar usuarios, cursos, reportes y configuración del sistema.</p>
+        
+        <div class="actions-grid mt-3">
+          <a href="/auth/users" class="btn btn-primary">
+            <i class="fas fa-users"></i>
+            Gestionar Usuarios
+          </a>
+          <a href="/auth/courses" class="btn btn-success">
+            <i class="fas fa-book"></i>
+            Administrar Cursos
+          </a>
+          <a href="/auth/reports" class="btn btn-secondary">
+            <i class="fas fa-chart-bar"></i>
+            Ver Reportes
+          </a>
+          <a href="/auth/security" class="btn btn-warning">
+            <i class="fas fa-shield-alt"></i>
+            Seguridad
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/dashboard.js"></script>
+  <script>
+    function toggleNotifications() {
+      console.log('Mostrar notificaciones administrador');
+    }
+
+    function toggleDropdown() {
+      const dropdown = document.getElementById('userDropdown');
+      dropdown.classList.toggle('show');
+    }
+
+    document.addEventListener('click', function(event) {
+      const dropdown = document.getElementById('userDropdown');
+      if (!event.target.closest('.dropdown')) {
+        dropdown.classList.remove('show');
+      }
+    });
+  </script>
+</body>
+</html>

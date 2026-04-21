@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .hidden {
+      display: none;
+    }
+    .error-message {
+      color: #d9534f;
+      background: #f2dede;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .success-message {
+      color: #3c763d;
+      background: #dff0d8;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .token-info {
+      background: #e7f3ff;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 15px;
+      color: #007bff;
+      text-decoration: none;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="form-wrapper">
+      <div class="formulario-login">
+        <h2>Iniciar Sesión</h2>
+        
+        <% if (error) { %>
+          <div class="error-message">
+            <%= error %>
+          </div>
+        <% } %>
+        
+        <% if (message) { %>
+          <div class="success-message">
+            <%= message %>
+          </div>
+        <% } %>
+
+        <!-- Formulario de login inicial -->
+        <div id="loginForm" class="<%= showToken ? 'hidden' : '' %>">
+          <form action="/auth/login" method="POST">
+            <div class="form-group">
+              <label for="rut">RUT:</label>
+              <input type="text" id="rut" name="rut" placeholder="Ej: 12345678-9" required>
+            </div>
+            <div class="form-group">
+              <label for="contrasena">Contraseña:</label>
+              <input type="password" id="contrasena" name="contrasena" required>
+            </div>
+            <button type="submit">Iniciar Sesión</button>
+          </form>
+        </div>
+
+        <!-- Formulario de verificación de token -->
+        <div id="tokenForm" class="<%= showToken ? '' : 'hidden' %>">
+          <div class="token-info">
+            Se ha enviado un token de verificación al correo: <strong><%= email %></strong>
+          </div>
+          <form action="/auth/verify-token" method="POST">
+            <div class="form-group">
+              <label for="token">Token de Verificación:</label>
+              <input type="text" id="token" name="token" placeholder="Ingrese el token recibido" required>
+            </div>
+            <button type="submit">Verificar Token</button>
+          </form>
+          
+          <a href="/auth/login" class="back-link">Volver al login</a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="side-panel"></div>
+  </div>
+</body>
+</html>

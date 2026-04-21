@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Apoderado - Colegio AIEP</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="dashboard-header">
+    <div class="header-container">
+      <div class="logo-section">
+        <div class="logo">
+          <i class="fas fa-graduation-cap"></i>
+          <span>Colegio AIEP</span>
+        </div>
+      </div>
+      
+      <nav class="nav-menu">
+        <div class="user-info">
+          <div class="user-avatar">
+            <i class="fas fa-user-tie"></i>
+          </div>
+          <div class="user-details">
+            <span class="user-name"><%= usuario.nombre %> <%= usuario.apellido_paterno %></span>
+            <span class="user-role">Apoderado</span>
+          </div>
+        </div>
+        
+        <div class="nav-actions">
+          <button class="nav-btn" onclick="toggleNotifications()">
+            <i class="fas fa-bell"></i>
+            <span class="badge">3</span>
+          </button>
+          <div class="dropdown">
+            <button class="nav-btn" onclick="toggleDropdown()">
+              <i class="fas fa-user-circle"></i>
+            </button>
+            <div class="dropdown-menu" id="userDropdown">
+              <a href="/auth/profile"><i class="fas fa-user"></i> Mi Perfil</a>
+              <a href="/auth/settings"><i class="fas fa-cog"></i> Configuración</a>
+              <div class="dropdown-divider"></div>
+              <a href="/auth/logout"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h3>Mi Panel</h3>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/auth/parent-dashboard" class="nav-item active">
+        <i class="fas fa-home"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/auth/my-children" class="nav-item">
+        <i class="fas fa-child"></i>
+        <span>Mis Hijos</span>
+      </a>
+      <a href="/auth/grades" class="nav-item">
+        <i class="fas fa-chart-line"></i>
+        <span>Notas</span>
+      </a>
+      <a href="/auth/attendance" class="nav-item">
+        <i class="fas fa-calendar-check"></i>
+        <span>Asistencia</span>
+      </a>
+      <a href="/auth/communications" class="nav-item">
+        <i class="fas fa-envelope"></i>
+        <span>Comunicaciones</span>
+      </a>
+      <a href="/auth/payments" class="nav-item">
+        <i class="fas fa-credit-card"></i>
+        <span>Pagos</span>
+      </a>
+      <a href="/auth/schedule" class="nav-item">
+        <i class="fas fa-calendar-alt"></i>
+        <span>Agenda</span>
+      </a>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Dashboard Apoderado</h1>
+      <p class="page-subtitle">Información académica de sus hijos</p>
+    </div>
+
+    <!-- Espacio para contenido real -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Bienvenido</h2>
+      </div>
+      <div class="card-content">
+        <p>Bienvenido al panel de control para apoderados. Aquí podrás ver información académica de sus hijos, asistencia, calificaciones y comunicaciones.</p>
+        
+        <div class="actions-grid mt-3">
+          <a href="/auth/my-children" class="btn btn-primary">
+            <i class="fas fa-child"></i>
+            Ver Mis Hijos
+          </a>
+          <a href="/auth/grades" class="btn btn-success">
+            <i class="fas fa-chart-line"></i>
+            Ver Notas
+          </a>
+          <a href="/auth/communications" class="btn btn-secondary">
+            <i class="fas fa-envelope"></i>
+            Comunicaciones
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/dashboard.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    function toggleNotifications() {
+      console.log('Mostrar notificaciones apoderado');
+    }
+
+    function toggleDropdown() {
+      const dropdown = document.getElementById('userDropdown');
+      dropdown.classList.toggle('show');
+    }
+
+    document.addEventListener('click', function(event) {
+      const dropdown = document.getElementById('userDropdown');
+      if (!event.target.closest('.dropdown')) {
+        dropdown.classList.remove('show');
+      }
+    });
+  </script>
+</body>
+</html>

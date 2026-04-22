@@ -3,24 +3,38 @@
 
 import { neon } from '@neondatabase/serverless';
 
-// Configuración desde variables de entorno (credenciales reales de Neon)
-const NEON_DATABASE_URL = 'postgresql://neondb_owner:npg_AFeUblfLt1Z9@ep-spring-waterfall-am602rpp-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require';
+// Configuración desde variables de entorno de Cloudflare Workers
+function getDatabaseUrl(env) {
+  // Priorizar variables de entorno de Cloudflare
+  if (env && env.NEON_DATABASE_URL) {
+    return env.NEON_DATABASE_URL;
+  }
+  
+  // Fallback para desarrollo local
+  return 'postgresql://neondb_owner:npg_AFeUblfLt1Z9@ep-spring-waterfall-am602rpp-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require';
+}
 
-// Inicializar cliente Neon serverless
-const sql = neon(NEON_DATABASE_URL);
+// Inicializar cliente Neon serverless (se inicializará dinámicamente)
+let sql = null;
 
 // Cache para conexiones (opcional)
 let connectionCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
 class DatabaseWorker {
-  constructor() {
+  constructor(env) {
     this.pool = null;
+    this.env = env;
   }
 
   // Inicializar conexión
   async init() {
     try {
+      // Inicializar cliente con variables de entorno
+      if (!sql) {
+        sql = neon(getDatabaseUrl(this.env));
+      }
+      
       // Test de conexión
       const result = await this.query('SELECT NOW() as test');
       console.log('✅ Worker DB conectado:', result[0].test);
@@ -199,7 +213,7 @@ class DatabaseWorker {
 // Exportar para uso en Cloudflare Workers
 export default {
   async fetch(request, env, ctx) {
-    const db = new DatabaseWorker();
+    const db = new DatabaseWorker(env);
     
     try {
       // Inicializar si es necesario

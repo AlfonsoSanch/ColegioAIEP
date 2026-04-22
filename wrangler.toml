@@ -1,10 +1,8 @@
-# Configuración para Cloudflare Workers
 name = "colegioaiep"
 main = "workers/database-worker.js"
 compatibility_date = "2024-01-01"
 
 [env.production]
-# Variables de entorno para producción - Neon Database
 NEON_DATABASE_URL = "postgresql://neondb_owner:npg_AFeUblfLt1Z9@ep-spring-waterfall-am602rpp-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require"
 PGHOST = "ep-spring-waterfall-am602rpp-pooler.c-5.us-east-1.aws.neon.tech"
 PGDATABASE = "neondb"
@@ -14,7 +12,6 @@ PGSSLMODE = "require"
 PGCHANNELBINDING = "require"
 
 [env.development]
-# Variables de entorno para desarrollo - Neon Database
 NEON_DATABASE_URL = "postgresql://neondb_owner:npg_AFeUblfLt1Z9@ep-spring-waterfall-am602rpp-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require"
 PGHOST = "ep-spring-waterfall-am602rpp-pooler.c-5.us-east-1.aws.neon.tech"
 PGDATABASE = "neondb"

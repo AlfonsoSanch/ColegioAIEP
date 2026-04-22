@@ -1,12 +1,12 @@
 const express = require('express');
-const sql = require('mssql/msnodesqlv8');
 const router = express.Router();
-const config = require('../config/database');
 const { enviarToken } = require('../config/email');
 const crypto = require('crypto');
 
-// Funcion para registrar intentos de login
+// URL del worker desplegado en Cloudflare Workers
+const WORKER_URL = 'https://colegioaiep-production.esteban-sanchezcolarte.workers.dev';
 
+// Funcion para registrar intentos de login usando el worker
 async function registrarIntentoLogin(
   rut,
   tipoIntento,
@@ -16,9 +16,6 @@ async function registrarIntentoLogin(
   req = null
 ) {
   try {
-    const connection = await sql.connect(config);
-    const request = new sql.Request();
-
     // Obtener IP correctamente (priorizar IPv4)
     let ip = '0.0.0.0';
 
@@ -98,28 +95,148 @@ async function registrarIntentoLogin(
       }
     }
 
-    request.input('id_usuario', sql.Int, idUsuario);
-    request.input('rut_ingresado', sql.VarChar, rut);
-    request.input('ip_origen', sql.VarChar, ip);
-    request.input('resultado', sql.VarChar, resultado.toLowerCase());
-    request.input('motivo_fallo', sql.VarChar, motivoFallo);
-    request.input(
-      'user_agent',
-      sql.VarChar,
-      req ? req.get('User-Agent') || 'Unknown' : 'Unknown'
-    );
+    // Enviar datos al worker
+    const response = await fetch(`${WORKER_URL}/registrar-login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        rut,
+        tipoIntento,
+        resultado,
+        motivoFallo,
+        idUsuario,
+        ip,
+        userAgent: req ? req.get('User-Agent') || 'Unknown' : 'Unknown'
+      })
+    });
 
-    await request.query(`
-      INSERT INTO intento_login 
-      (id_usuario, rut_ingresado, ip_origen, resultado, motivo_fallo, user_agent)
-      VALUES 
-      (@id_usuario, @rut_ingresado, @ip_origen, @resultado, @motivo_fallo, @user_agent)
-    `);
+    if (!response.ok) {
+      throw new Error(`Worker error: ${response.status}`);
+    }
 
-    await connection.close();
+    const result = await response.json();
     console.log(`Intento de ${tipoIntento} registrado: ${rut} - ${resultado}`);
+    return result;
+
   } catch (error) {
     console.error('Error al registrar intento de login:', error);
+    throw error;
+  }
+}
+
+// Función para obtener usuario por RUT usando el worker
+async function obtenerUsuarioPorRut(rut) {
+  try {
+    const response = await fetch(`${WORKER_URL}/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sql: `
+          SELECT u.id_usuario, u.id_persona, u.password, u.activo,
+                 p.rut, p.nombre, p.a_paterno, p.a_materno, p.email
+          FROM usuarios u
+          INNER JOIN personas p ON u.id_persona = p.id_persona
+          WHERE p.rut = $1 AND u.activo = true AND p.activo = true
+        `,
+        params: [rut]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Worker error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result[0] || null;
+  } catch (error) {
+    console.error('Error obteniendo usuario:', error);
+    throw error;
+  }
+}
+
+// Función para guardar token usando el worker
+async function guardarToken(idUsuario, token, expiresAt) {
+  try {
+    const response = await fetch(`${WORKER_URL}/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sql: `
+          INSERT INTO tokens (id_usuario, token, fecha_expiracion)
+          VALUES ($1, $2, $3)
+          RETURNING id_token
+        `,
+        params: [idUsuario, token, expiresAt]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Worker error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log(`Token guardado para usuario ${idUsuario}`);
+    return result[0];
+  } catch (error) {
+    console.error('Error guardando token:', error);
+    throw error;
+  }
+}
+
+// Función para verificar token usando el worker
+async function verificarToken(idUsuario, token) {
+  try {
+    // Primero verificar si el token existe y es válido
+    const response = await fetch(`${WORKER_URL}/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sql: `
+          SELECT id_token, fecha_expiracion 
+          FROM tokens 
+          WHERE id_usuario = $1 AND token = $2 
+          AND fecha_expiracion > CURRENT_TIMESTAMP
+          ORDER BY id_token DESC 
+          LIMIT 1
+        `,
+        params: [idUsuario, token]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Worker error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.length > 0) {
+      // Eliminar token usado
+      await fetch(`${WORKER_URL}/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sql: 'DELETE FROM tokens WHERE id_token = $1',
+          params: [result[0].id_token]
+        })
+      });
+      
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error verificando token:', error);
+    throw error;
   }
 }
 
@@ -152,25 +269,18 @@ function generarToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
-// Funcion para guardar token en base de datos y enviar correo
-async function guardarToken(idUsuario, email, nombre) {
+// Funcion para guardar token en base de datos y enviar correo (usando worker)
+async function guardarTokenConEmail(idUsuario, email, nombre) {
   try {
-    const connection = await sql.connect(config);
-    const request = new sql.Request();
-    
     const token = generarToken();
     const fechaExpiracion = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
     
-    request.input('id_usuario', sql.Int, idUsuario);
-    request.input('token', sql.VarChar, token);
-    request.input('fecha_expiracion', sql.DateTime, fechaExpiracion);
+    // Usar la función del worker para guardar el token
+    const resultado = await guardarToken(idUsuario, token, fechaExpiracion);
     
-    await request.query(`
-      INSERT INTO tokens (id_usuario, token, fecha_expiracion)
-      VALUES (@id_usuario, @token, @fecha_expiracion)
-    `);
-    
-    await connection.close();
+    if (!resultado) {
+      throw new Error('Error al guardar token en worker');
+    }
     
     // Enviar correo con el token
     const emailEnviado = await enviarToken(email, token, nombre);
@@ -185,31 +295,6 @@ async function guardarToken(idUsuario, email, nombre) {
   } catch (error) {
     console.error('Error al guardar token:', error);
     return null;
-  }
-}
-
-// Funcion para verificar token
-async function verificarToken(idUsuario, tokenIngresado) {
-  try {
-    const connection = await sql.connect(config);
-    const request = new sql.Request();
-    
-    request.input('id_usuario', sql.Int, idUsuario);
-    request.input('token', sql.VarChar, tokenIngresado);
-    request.input('fecha_actual', sql.DateTime, new Date());
-    
-    const result = await request.query(`
-      SELECT id_token FROM tokens 
-      WHERE id_usuario = @id_usuario 
-      AND token = @token 
-      AND fecha_expiracion > @fecha_actual
-    `);
-    
-    await connection.close();
-    return result.recordset.length > 0;
-  } catch (error) {
-    console.error('Error al verificar token:', error);
-    return false;
   }
 }
 
@@ -230,55 +315,59 @@ router.post('/login', async (req, res) => {
       return res.render('login', { error: 'Por favor ingrese RUT y contraseña', showToken: false, message: null, email: null });
     }
 
-    // Consulta a la base de datos para verificar credenciales
-    const connection = await sql.connect(config);
-    const request = new sql.Request();
+    // Consulta a la base de datos para verificar credenciales usando el worker
+    const usuario = await obtenerUsuarioPorRut(rut);
     
-    request.input('rut', sql.VarChar, rut);
-    request.input('password', sql.VarChar, contrasena);
-
-    const result = await request.query(`
-      SELECT u.id_usuario, p.nombre, p.a_paterno, p.a_materno, p.rut, p.email, tu.tipo
-      FROM usuarios u
-      INNER JOIN personas p ON u.id_persona = p.id_persona
-      LEFT JOIN usuario_tipo ut ON u.id_usuario = ut.id_usuario
-      LEFT JOIN tipo_usuario tu ON ut.id_tipo_usuario = tu.id_tipo_usuario
-      WHERE p.rut = @rut AND u.password = @password AND u.activo = 1
-    `);
-    
-    await connection.close();
-    
-    if (result.recordset.length > 0) {
-      const userData = result.recordset[0];
+    if (usuario && usuario.password === contrasena) {
+      // Obtener tipo de usuario (necesario para redirección)
+      const response = await fetch(`${WORKER_URL}/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sql: `
+            SELECT tu.tipo
+            FROM usuarios u
+            LEFT JOIN usuario_tipo ut ON u.id_usuario = ut.id_usuario
+            LEFT JOIN tipo_usuario tu ON ut.id_tipo_usuario = tu.id_tipo_usuario
+            WHERE u.id_usuario = $1
+          `,
+          params: [usuario.id_usuario]
+        })
+      });
+      
+      const tipoResult = await response.json();
+      const tipoUsuario = tipoResult[0]?.tipo || 'Usuario';
       
       // Registrar intento exitoso de login (primer paso)
-      await registrarIntentoLogin(rut, 'LOGIN', 'EXITO', null, userData.id_usuario, req);
+      await registrarIntentoLogin(rut, 'LOGIN', 'EXITO', null, usuario.id_usuario, req);
       
-      // Generar y guardar token
-      const token = await guardarToken(userData.id_usuario, userData.email, userData.nombre);
+      // Generar y guardar token con email
+      const token = await guardarTokenConEmail(usuario.id_usuario, usuario.email, usuario.nombre);
       
       if (token) {
         // Guardar datos temporales en sesión
         req.session.tempUser = {
-          id_usuario: userData.id_usuario,
-          rut: userData.rut,
-          nombre: userData.nombre,
-          apellido_paterno: userData.a_paterno,
-          apellido_materno: userData.a_materno,
-          tipo: userData.tipo || 'Usuario',
-          email: userData.email
+          id_usuario: usuario.id_usuario,
+          rut: usuario.rut,
+          nombre: usuario.nombre,
+          apellido_paterno: usuario.a_paterno,
+          apellido_materno: usuario.a_materno,
+          tipo: tipoUsuario,
+          email: usuario.email
         };
         
         // Mostrar formulario de token
         res.render('login', { 
           error: null, 
           showToken: true, 
-          email: userData.email,
+          email: usuario.email,
           message: 'Se ha enviado un token de verificación a su correo'
         });
       } else {
         // Registrar intento fallido por error al generar token
-        await registrarIntentoLogin(rut, 'LOGIN', 'FALLO', 'ERROR_TOKEN_GENERACION', userData.id_usuario, req);
+        await registrarIntentoLogin(rut, 'LOGIN', 'FALLO', 'ERROR_TOKEN_GENERACION', usuario.id_usuario, req);
         res.render('login', { error: 'Error al generar token', showToken: false, message: null, email: null });
       }
     } else {

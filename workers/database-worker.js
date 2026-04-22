@@ -4,7 +4,7 @@
 import { neon } from '@neondatabase/serverless';
 
 // Configuración desde variables de entorno (credenciales reales de Neon)
-const NEON_DATABASE_URL = process.env.NEON_DATABASE_URL || 'postgresql://neondb_owner:npg_AFeUblfLt1Z9@ep-spring-waterfall-am602rpp-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require';
+const NEON_DATABASE_URL = 'postgresql://neondb_owner:npg_AFeUblfLt1Z9@ep-spring-waterfall-am602rpp-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require';
 
 // Inicializar cliente Neon serverless
 const sql = neon(NEON_DATABASE_URL);

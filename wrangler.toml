@@ -1,5 +1,5 @@
 # Configuración para Cloudflare Workers
-name = "colegio-aiep-db-worker"
+name = "colegioaiep"
 main = "workers/database-worker.js"
 compatibility_date = "2024-01-01"
 
@@ -22,7 +22,3 @@ PGUSER = "neondb_owner"
 PGPASSWORD = "npg_AFeUblfLt1Z9"
 PGSSLMODE = "require"
 PGCHANNELBINDING = "require"
-
-# Límites y configuración
-[limits]
-cpu_ms = 50000
